@@ -160,34 +160,43 @@ class CmsConverter extends SerializedToJson
         $tokenizer = $this->parameterFactory->create();
         $tokenizer->setString($paramsString);
         $widgetParameters = $tokenizer->tokenize();
-        if (isset($widgetParameters['conditions_encoded'])) {
-            if ($this->isValidJsonValue($widgetParameters['conditions_encoded'])) {
-                $widgetConditionsEncoded = $this->json->unserialize(
-                    $this->normalizer->restoreReservedCharacters($widgetParameters['conditions_encoded'])
-                );
-                foreach ($widgetConditionsEncoded as &$item) {
-                    foreach ($item as $label => $value) {
-                        if (filter_var($value, FILTER_VALIDATE_URL) && $url = parse_url($value)) {
-                            $item[$label] = str_replace($url["scheme"] .
-                                "://" . $url["host"], TemplateAliasHelper::CMS_WIDGET_URL_PLACEHOLDER, $value);
-                            if (!in_array($url["path"], $this->assets)) {
-                                $this->assets[] = $url["path"];
+
+        $keysToUnserialize = [];
+        foreach(array_keys($widgetParameters) as $key) {
+            if (str_contains($key, 'repeatable_') || $key === 'conditions_encoded') {
+                $keysToUnserialize[] = $key;
+            }
+        }
+
+        if (!empty($keysToUnserialize)) {
+            foreach ($keysToUnserialize as $key) {
+                if ($this->isValidJsonValue($widgetParameters[$key])) {
+                    $widgetConditionsEncoded = $this->json->unserialize(
+                        $this->normalizer->restoreReservedCharacters($widgetParameters[$key])
+                    );
+                    foreach ($widgetConditionsEncoded as &$item) {
+                        foreach ($item as $label => $value) {
+                            if (filter_var($value, FILTER_VALIDATE_URL) && $url = parse_url($value)) {
+                                $item[$label] = str_replace($url["scheme"] .
+                                    "://" . $url["host"], TemplateAliasHelper::CMS_WIDGET_URL_PLACEHOLDER, $value);
+                                if (!in_array($url["path"], $this->assets)) {
+                                    $this->assets[] = $url["path"];
+                                }
                             }
                         }
                     }
+                    $widgetParameters[$key] = $this->json->serialize($widgetConditionsEncoded);
                 }
-                $widgetParameters['conditions_encoded'] = $this->json->serialize($widgetConditionsEncoded);
+                $widgetParameters[$key] = $this->normalizer->replaceReservedCharacters(
+                    parent::convert($widgetParameters[$key])
+                );
             }
-            $widgetParameters['conditions_encoded'] = $this->normalizer->replaceReservedCharacters(
-                parent::convert($widgetParameters['conditions_encoded'])
-            );
-            $newParamsString = '';
+            $paramsString = '';
             foreach ($widgetParameters as $key => $parameter) {
-                $newParamsString .= ' ' . $key . '="' . $parameter . '"';
+                $paramsString .= ' ' . $key . '="' . $parameter . '"';
             }
-            return $newParamsString;
-        } else {
-            return $paramsString;
         }
+
+        return $paramsString;
     }
 }
