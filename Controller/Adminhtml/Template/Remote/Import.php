@@ -71,12 +71,25 @@ class Import extends Action implements HttpPostActionInterface
                 $credentials["app_secret"],
                 $credentials["refresh_token"],
             );
-            $importedTemplateId = $this->templateManagement
+            $importedTemplate = $this->templateManagement
                 ->importTemplateFromArchive($tmpTemplateDownloadPath, $remoteTemplate["file_path"]);
+            $importedTemplateId = $importedTemplate->getId();
+            $externalUrls = $this->templateManagement->doSecurityScanForTemplate($importedTemplate->getTemplate());
+
             if ($importedTemplateId) {
-                $this->messageManager->addSuccessMessage(
-                    __("Template with ID %1 correctly imported.", $importedTemplateId)
-                );
+                if (!empty($externalUrls)) {
+                    $this->messageManager->addSuccessMessage(
+                        __(
+                            "Template with ID %1 correctly imported. Please verify the security of these external resources in the template: %2",
+                            $importedTemplateId,
+                            implode(', ', $externalUrls)
+                        )
+                    );
+                } else {
+                    $this->messageManager->addSuccessMessage(
+                        __("Template with ID %1 correctly imported.", $importedTemplateId)
+                    );
+                }
             }
         } catch (\Exception $e) {
             $this->logger->error($e);

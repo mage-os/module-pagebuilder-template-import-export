@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace MageOS\PageBuilderTemplateImportExport\Model;
 
 use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\App\DeploymentConfig;
 use Magento\Framework\Serialize\SerializerInterface;
 use MageOS\PageBuilderTemplateImportExport\Api\TemplateManagementInterface;
 use Magento\Framework\App\Filesystem\DirectoryList;
@@ -37,6 +38,11 @@ use Exception;
 
 class TemplateManagement implements TemplateManagementInterface
 {
+
+    const EXTERNAL_URL_WHITELIST = [
+        'http://www.w3.org/2000/svg'
+    ];
+
     /**
      * @param CmsConverter $cmsConverter
      * @param Filesystem $filesystem
@@ -57,6 +63,7 @@ class TemplateManagement implements TemplateManagementInterface
      * @param XmlParser $xmlParser
      * @param SerializerInterface $serializer
      * @param ScopeConfigInterface $scopeConfig
+     * @param DeploymentConfig $deploymentConfig
      */
     public function __construct(
         protected CmsConverter $cmsConverter,
@@ -77,7 +84,8 @@ class TemplateManagement implements TemplateManagementInterface
         protected SearchCriteriaBuilder $searchCriteriaBuilder,
         protected XmlParser $xmlParser,
         protected SerializerInterface $serializer,
-        protected ScopeConfigInterface $scopeConfig
+        protected ScopeConfigInterface $scopeConfig,
+        protected DeploymentConfig $deploymentConfig
     ) {
     }
 
@@ -389,9 +397,15 @@ class TemplateManagement implements TemplateManagementInterface
     }
 
     /**
-     * @inheritDoc
+     * @param string $importPath
+     * @param string $filePath
+     * @return TemplateInterface|null
+     * @throws FileSystemException
+     * @throws InputException
+     * @throws LocalizedException
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
      */
-    public function importTemplateFromArchive(string $importPath, string $filePath = ""): int
+    public function importTemplateFromArchive(string $importPath, string $filePath = ""): ?TemplateInterface
     {
         $reader = $this->filesystem->getDirectoryRead(DirectoryList::VAR_EXPORT);
         $zip = new ZipArchive();
@@ -432,6 +446,8 @@ class TemplateManagement implements TemplateManagementInterface
             $childrenImportResult["children"] ?? []
         );
 
+        $templateHtmlContent = $this->substituteAdminhtmlStaticUrl($templateHtmlContent);
+
         if (empty($exceptionMessages)) {
             try {
                 $config = $this->xmlParser
@@ -453,9 +469,40 @@ class TemplateManagement implements TemplateManagementInterface
         }
 
         if ($importedTemplate && $importedTemplate->getId()) {
-            return intval($importedTemplate->getId());
+            return $importedTemplate;
         }
-        return 0;
+        return null;
+    }
+
+    /**
+     * Replace the adminhtml static content URL placeholder with the actual
+     * pub/static URL of the destination site's admin area.
+     *
+     * Reconstructs the URL from the store base URL, the configured admin
+     * frontName, and the currently deployed static content version.
+     *
+     * @param string $content
+     * @return string
+     */
+    protected function substituteAdminhtmlStaticUrl(string $content): string
+    {
+        $baseUrl = rtrim($this->storeManager->getStore()->getBaseUrl(), '/');
+        $adminFrontName = $this->deploymentConfig->get('backend/frontName', 'admin');
+
+        $pubPath = $this->filesystem->getDirectoryRead(DirectoryList::PUB)->getAbsolutePath();
+        $deployedVersionFile = rtrim($pubPath, '/') . '/static/deployed_version.txt';
+        $versionSegment = '';
+        if (file_exists($deployedVersionFile)) {
+            $versionSegment = 'version' . trim(file_get_contents($deployedVersionFile)) . '/';
+        }
+
+        $adminStaticUrl = $baseUrl . '/static/' . $versionSegment . 'adminhtml/';
+
+        return str_replace(
+            TemplateAliasHelper::ADMINHTML_STATIC_CONTENT_URL_PLACEHOLDER,
+            $adminStaticUrl,
+            $content
+        );
     }
 
     /**
@@ -573,5 +620,62 @@ class TemplateManagement implements TemplateManagementInterface
         }
 
         return $content;
+    }
+
+    /**
+     * @param string $templateHtml
+     * @return array
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
+     */
+    public function doSecurityScanForTemplate(string $templateHtml): array
+    {
+        $baseUrl = rtrim($this->storeManager->getStore()->getBaseUrl(), '/');
+        $parsedBase = parse_url($baseUrl);
+        $host = $parsedBase['host'];
+        if (isset($parsedBase['port'])) {
+            $host .= ':' . $parsedBase['port'];
+        }
+
+        preg_match_all('#(?:https://|http://)[^"\'\s>)]+#i', $templateHtml, $urlMatches);
+
+        // Sanitize each raw match: strip everything from the first character
+        // that cannot be part of a URL. This handles JSON-escaped quotes (\"),
+        // HTML-entity-encoded delimiters (&quot; &gt;) and stray HTML tags
+        // that are captured when the source content is encoded.
+        $foundUrls = array_values(array_unique(array_filter(array_map(
+            static function (string $raw): string {
+                // Stop at backslash (JSON escape), actual quote/whitespace/angle-bracket
+                $clean = preg_replace('/(?:["\'\s<>\\\\]|&(?:quot|gt|lt|amp|apos);).*/s', '', $raw);
+                return $clean ?? '';
+            },
+            $urlMatches[0]
+        ))));
+
+        $externalUrls = [];
+        foreach ($foundUrls as $url) {
+            $parsedUrl = parse_url($url);
+            $urlHost = $parsedUrl['host'] ?? '';
+            if (isset($parsedUrl['port'])) {
+                $urlHost .= ':' . $parsedUrl['port'];
+            }
+
+            if ($urlHost === $host) {
+                continue;
+            }
+
+            $whitelisted = false;
+            foreach (self::EXTERNAL_URL_WHITELIST as $entry) {
+                if (str_contains($url, $entry)) {
+                    $whitelisted = true;
+                    break;
+                }
+            }
+
+            if (!$whitelisted) {
+                $externalUrls[] = $url;
+            }
+        }
+
+        return $externalUrls;
     }
 }

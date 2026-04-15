@@ -17,10 +17,15 @@ define([
             this._super(event, data);
 
             let error = data.result.error ?? undefined;
+            let externalUrls = data.result.external_urls ?? '';
             if (!error) {
+                let content = $.mage.__('Template successfully imported. The page will be reloaded.');
+                if (externalUrls !== '') {
+                    content += $.mage.__(' Please verify the security of these external resources in the template: ') + externalUrls;
+                }
                 uiAlert({
                     title: $.mage.__('Import complete'),
-                    content: $.mage.__('Template successfully imported. The page will be reloaded.'),
+                    content: content,
                     actions: {
                         always: function(){
                             $('body').loader('show');

@@ -62,7 +62,9 @@ class Import extends Action implements HttpPostActionInterface
                 $result = $uploader->save($destinationFolder);
 
                 $importedFilePath = $result['path'] . $result['file'];
-                $this->templateManagement->importTemplateFromArchive($importedFilePath);
+                $template = $this->templateManagement->importTemplateFromArchive($importedFilePath);
+                $externalUrls = $this->templateManagement->doSecurityScanForTemplate($template->getTemplate());
+                $result['external_urls'] = implode(',', $externalUrls);
             }
 
         } catch (\Exception $e) {

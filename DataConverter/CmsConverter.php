@@ -3,15 +3,18 @@ declare(strict_types=1);
 
 namespace MageOS\PageBuilderTemplateImportExport\DataConverter;
 
+use Magento\Framework\App\DeploymentConfig;
 use Magento\Framework\Data\Wysiwyg\Normalizer;
 use Magento\Framework\DB\DataConverter\DataConversionException;
 use Magento\Framework\Exception\LocalizedException;
 use Magento\Framework\Filter\Template\Tokenizer\Parameter;
 use Magento\Framework\Filter\Template\Tokenizer\ParameterFactory;
 use Magento\Framework\DB\DataConverter\SerializedToJson;
+use Magento\Framework\Message\ManagerInterface;
 use Magento\Framework\Serialize\Serializer\Json;
 use Magento\Framework\Serialize\Serializer\Serialize;
 use Magento\Cms\Api\BlockRepositoryInterface;
+use Magento\Store\Model\StoreManagerInterface;
 use MageOS\PageBuilderTemplateImportExport\Helper\Aliases as TemplateAliasHelper;
 
 class CmsConverter extends SerializedToJson
@@ -33,13 +36,19 @@ class CmsConverter extends SerializedToJson
      * @param Json $json
      * @param BlockRepositoryInterface $cmsBlockRepository
      * @param Serialize $serialize
+     * @param StoreManagerInterface $storeManager
+     * @param ManagerInterface $messageManager
+     * @param DeploymentConfig $deploymentConfig
      */
     public function __construct(
         protected Normalizer $normalizer,
         protected ParameterFactory $parameterFactory,
         protected Json $json,
         protected BlockRepositoryInterface $cmsBlockRepository,
-        protected Serialize $serialize
+        protected Serialize $serialize,
+        protected StoreManagerInterface $storeManager,
+        protected ManagerInterface $messageManager,
+        protected DeploymentConfig $deploymentConfig
     ) {
         parent::__construct($serialize, $json);
     }
@@ -109,10 +118,41 @@ class CmsConverter extends SerializedToJson
                 ];
             }
         }
+        $this->substituteSiteUrls($convertedValue);
+
         if ($child) {
             return $convertedValue;
         }
         return ["value" => $convertedValue, "assets" => $this->assets, "children" => $this->cmsBlocks];
+    }
+
+    /**
+     * @param string $convertedValue
+     * @return void
+     * @throws LocalizedException
+     * @throws \Magento\Framework\Exception\NoSuchEntityException
+     */
+    protected function substituteSiteUrls(string &$convertedValue): void
+    {
+        $baseUrl = rtrim($this->storeManager->getStore()->getBaseUrl(), '/');
+        $parsedBase = parse_url($baseUrl);
+        $host = $parsedBase['host'];
+        if (isset($parsedBase['port'])) {
+            $host .= ':' . $parsedBase['port'];
+        }
+
+        $adminStaticPattern = '#https?://' . preg_quote($host, '#') . '/static/version\d+/adminhtml/#';
+        $convertedValue = preg_replace(
+            $adminStaticPattern,
+            TemplateAliasHelper::ADMINHTML_STATIC_CONTENT_URL_PLACEHOLDER,
+            $convertedValue
+        );
+
+        $convertedValue = str_replace(
+            ['https://' . $host, 'http://' . $host],
+            TemplateAliasHelper::CMS_WIDGET_URL_PLACEHOLDER,
+            $convertedValue
+        );
     }
 
     /**

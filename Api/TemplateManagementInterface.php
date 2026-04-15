@@ -26,7 +26,7 @@ interface TemplateManagementInterface
 
     /**
      * @param string $importPath
-     * @return int
+     * @return TemplateInterface|null
      */
-    public function importTemplateFromArchive(string $importPath): int;
+    public function importTemplateFromArchive(string $importPath): ?TemplateInterface;
 }

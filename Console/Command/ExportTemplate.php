@@ -102,7 +102,6 @@ class ExportTemplate extends \Symfony\Component\Console\Command\Command
                         $config
                     );
                 } catch (\Exception $e) {
-                    dd($e->getMessage());
                     $output->writeln("An error occurred generating template export file");
                     return Cli::RETURN_FAILURE;
                 }

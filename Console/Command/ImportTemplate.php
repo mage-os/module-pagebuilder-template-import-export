@@ -43,10 +43,21 @@ class ImportTemplate extends \Symfony\Component\Console\Command\Command
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $output->setDecorated(true);
-        $templateId = $this->templateManagement->importTemplateFromArchive($input->getOption(self::IMPORT_PATH));
+        $template = $this->templateManagement->importTemplateFromArchive($input->getOption(self::IMPORT_PATH));
+        $externalUrls = $this->templateManagement->doSecurityScanForTemplate($template->getTemplate());
 
+        $templateId = $template->getId();
         if ($templateId) {
-            $output->writeln("Template archive imported correctly");
+            if (!empty($externalUrls)) {
+                $output->writeln(
+                    __(
+                        "Template imported correctly. Please verify the security of these external resources in the template: %1",
+                        implode(' - ', $externalUrls)
+                    )
+                );
+            } else {
+                $output->writeln("Template archive imported correctly");
+            }
             return Cli::RETURN_SUCCESS;
         }
 
