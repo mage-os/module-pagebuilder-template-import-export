@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ## Updated
 - Add security check on external files imported through template.
 - Replace adminhtml and frontend urls files included through pagebuilder widget preview module or other solutions.
+### Fixed
+- Fix undefined variable $children in importTemplateChildren when no files match the pattern
+- Add return type hints to SearchResultInterface methods in Grid/Collection
 
 ## 1.6.2
 ## Updated

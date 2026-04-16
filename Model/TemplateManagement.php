@@ -523,6 +523,7 @@ class TemplateManagement implements TemplateManagementInterface
 
         // Scan the folder
         $files = scandir($childrenFolderPath);
+        $children = [];
 
         foreach ($files as $file) {
             // Skip non-files
