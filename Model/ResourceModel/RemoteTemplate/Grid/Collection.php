@@ -58,79 +58,62 @@ class Collection extends RemoteTemplateCollection implements SearchResultInterfa
     }
 
     /**
-     * Get aggregations
-     *
      * @return AggregationInterface
      */
-    public function getAggregations()
+    public function getAggregations(): AggregationInterface
     {
         return $this->aggregations;
     }
 
     /**
-     * Set aggregations
-     *
      * @param AggregationInterface $aggregations
      * @return $this
      */
-    public function setAggregations($aggregations)
+    public function setAggregations(AggregationInterface $aggregations): Collection
     {
         $this->aggregations = $aggregations;
         return $this;
     }
 
     /**
-     * Get search criteria.
-     *
-     * @return \Magento\Framework\Api\SearchCriteriaInterface|null
+     * @return SearchCriteriaInterface|null
      */
-    public function getSearchCriteria()
+    public function getSearchCriteria(): ?SearchCriteriaInterface
     {
         return null;
     }
 
     /**
-     * Set search criteria.
-     *
-     * @param SearchCriteriaInterface $searchCriteria
+     * @param SearchCriteriaInterface|null $searchCriteria
      * @return $this
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    public function setSearchCriteria(?SearchCriteriaInterface $searchCriteria = null)
+    public function setSearchCriteria(?SearchCriteriaInterface $searchCriteria = null): Collection
     {
         return $this;
     }
 
     /**
-     * Get total count.
-     *
      * @return int
      */
-    public function getTotalCount()
+    public function getTotalCount(): int
     {
         return $this->getSize();
     }
 
     /**
-     * Set total count.
-     *
      * @param int $totalCount
      * @return $this
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    public function setTotalCount($totalCount)
+    public function setTotalCount(int $totalCount): Collection
     {
         return $this;
     }
 
     /**
-     * Set items list.
-     *
-     * @param ExtensibleDataInterface[] $items
+     * @param array|null $items
      * @return $this
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter)
      */
-    public function setItems(?array $items = null)
+    public function setItems(?array $items = null): Collection
     {
         return $this;
     }
