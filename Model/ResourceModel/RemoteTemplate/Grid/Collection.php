@@ -69,7 +69,7 @@ class Collection extends RemoteTemplateCollection implements SearchResultInterfa
      * @param AggregationInterface $aggregations
      * @return $this
      */
-    public function setAggregations(AggregationInterface $aggregations): Collection
+    public function setAggregations($aggregations): Collection
     {
         $this->aggregations = $aggregations;
         return $this;
@@ -104,7 +104,7 @@ class Collection extends RemoteTemplateCollection implements SearchResultInterfa
      * @param int $totalCount
      * @return $this
      */
-    public function setTotalCount(int $totalCount): Collection
+    public function setTotalCount($totalCount): Collection
     {
         return $this;
     }
