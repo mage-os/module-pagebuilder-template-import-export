@@ -12,8 +12,8 @@ use Magento\Framework\Filesystem;
 use MageOS\PageBuilderTemplateImportExport\Api\TemplateManagementInterface;
 use MageOS\PageBuilderTemplateImportExport\Api\RemoteTemplateRepositoryInterface;
 use MageOS\PageBuilderTemplateImportExport\Helper\ModuleConfig;
-use PHPUnit\Util\Exception;
 use Psr\Log\LoggerInterface;
+use Magento\Framework\Exception\LocalizedException;
 
 class Import extends Action implements HttpPostActionInterface
 {
@@ -58,7 +58,7 @@ class Import extends Action implements HttpPostActionInterface
                 $remoteTemplate->getData("remote_storage_id")
             );
             if ($credentials === false) {
-                throw new Exception("Remote storage not found.");
+                throw new LocalizedException(__("Remote storage not found."));
             }
             $importExportPath = $this->filesystem
                 ->getDirectoryRead(DirectoryList::VAR_IMPORT_EXPORT)

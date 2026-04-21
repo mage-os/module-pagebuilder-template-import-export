@@ -93,7 +93,11 @@ class CmsConverter extends SerializedToJson
         );
         foreach ($matches as $match) {
             if (isset($match[2])) {
-                $url = explode("=", $match[2])[1];
+                $parts = explode("=", $match[2]);
+                if (!isset($parts[1])) {
+                    continue;
+                }
+                $url = $parts[1];
                 if (!in_array("/media/" . $url, $this->assets)) {
                     $this->assets[] = "/media/" . $url;
                 }
@@ -136,9 +140,12 @@ class CmsConverter extends SerializedToJson
     {
         $baseUrl = rtrim($this->storeManager->getStore()->getBaseUrl(), '/');
         $parsedBase = parse_url($baseUrl);
-        $host = $parsedBase['host'];
+        $host = $parsedBase['host'] ?? '';
         if (isset($parsedBase['port'])) {
             $host .= ':' . $parsedBase['port'];
+        }
+        if ($host === '') {
+            return;
         }
 
         $adminStaticPattern = '#https?://' . preg_quote($host, '#') . '/static/version\d+/adminhtml/#';

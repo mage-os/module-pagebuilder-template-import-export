@@ -55,9 +55,10 @@ class ApiKeySerialized extends \Magento\Config\Model\Config\Backend\Serialized\A
     public function beforeSave()
     {
         $values = $this->getValue();
-        if (is_array($values)) {
-            unset($values['__empty']);
+        if (!is_array($values)) {
+            return parent::beforeSave();
         }
+        unset($values['__empty']);
         foreach ($values as $key => $row) {
             if (isset($row["access_code"]) && $row["access_code"] !== "") {
                 $dropbox = $this->dropboxClientFactory->create(
@@ -129,10 +130,12 @@ class ApiKeySerialized extends \Magento\Config\Model\Config\Backend\Serialized\A
     public function afterSave()
     {
         $oldValue = $this->getOldValue();
-        if (!empty($oldValue)) {
+        if (!empty($oldValue) && is_string($oldValue)) {
             $newValue = $this->getValue();
             $oldValue = $this->jsonSerializer->unserialize($oldValue);
-            $newValue = $this->jsonSerializer->unserialize($newValue);
+            if (is_string($newValue)) {
+                $newValue = $this->jsonSerializer->unserialize($newValue);
+            }
             $keyDiff = [];
             if (is_array($newValue) && is_array($oldValue)) {
                 $keyDiff = array_diff_key($oldValue, $newValue);

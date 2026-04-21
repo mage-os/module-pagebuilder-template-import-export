@@ -493,7 +493,10 @@ class TemplateManagement implements TemplateManagementInterface
         $deployedVersionFile = rtrim($pubPath, '/') . '/static/deployed_version.txt';
         $versionSegment = '';
         if (file_exists($deployedVersionFile)) {
-            $versionSegment = 'version' . trim(file_get_contents($deployedVersionFile)) . '/';
+            $deployedVersion = file_get_contents($deployedVersionFile);
+            if ($deployedVersion !== false) {
+                $versionSegment = 'version' . trim($deployedVersion) . '/';
+            }
         }
 
         $adminStaticUrl = $baseUrl . '/static/' . $versionSegment . 'adminhtml/';
@@ -523,6 +526,9 @@ class TemplateManagement implements TemplateManagementInterface
 
         // Scan the folder
         $files = scandir($childrenFolderPath);
+        if ($files === false) {
+            return $exceptionMessages;
+        }
         $children = [];
 
         foreach ($files as $file) {
@@ -537,6 +543,9 @@ class TemplateManagement implements TemplateManagementInterface
                 $id = $matches[2];
                 $order = (int)$matches[3];
                 $content = file_get_contents($childrenFolderPath . '/' . $file);
+                if ($content === false) {
+                    continue;
+                }
                 $children[$order] = [
                     'id' => $id,
                     'name' => $prefix,
@@ -632,7 +641,7 @@ class TemplateManagement implements TemplateManagementInterface
     {
         $baseUrl = rtrim($this->storeManager->getStore()->getBaseUrl(), '/');
         $parsedBase = parse_url($baseUrl);
-        $host = $parsedBase['host'];
+        $host = $parsedBase['host'] ?? '';
         if (isset($parsedBase['port'])) {
             $host .= ':' . $parsedBase['port'];
         }
@@ -655,6 +664,9 @@ class TemplateManagement implements TemplateManagementInterface
         $externalUrls = [];
         foreach ($foundUrls as $url) {
             $parsedUrl = parse_url($url);
+            if (!is_array($parsedUrl)) {
+                continue;
+            }
             $urlHost = $parsedUrl['host'] ?? '';
             if (isset($parsedUrl['port'])) {
                 $urlHost .= ':' . $parsedUrl['port'];

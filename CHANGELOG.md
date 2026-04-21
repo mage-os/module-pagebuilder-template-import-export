@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 1.8.0 - 2026-04-21
+### Fixed
+- PHP 8.4 and PHP 8.5 compatibility.
+- Guard `trim()` against `file_get_contents()` returning `false` in `substituteAdminhtmlStaticUrl`.
+- Guard `scandir()` and `file_get_contents()` false returns in `importTemplateChildren`.
+- Null-safe access to `parse_url()` result keys in `TemplateManagement::doSecurityScanForTemplate` and `CmsConverter::substituteSiteUrls`.
+- Null-safe `explode()` offset access in `CmsConverter::convert` when parsing pagebuilder media tokens.
+- `ModuleConfig::getDropboxCredentials()` no longer passes non-string values to `unserialize()` and always returns an array.
+- `ModuleConfig::getDropboxAccountCredentialsByAppKey()` no longer iterates non-array credentials.
+- `ApiKeySerialized::beforeSave()` and `afterSave()` no longer iterate/unserialize non-array/non-string values.
+- Removed invalid `return` statements from console command constructors (`ImportTemplate`, `UpdateRemoteTemplateList`).
+- Replaced erroneous `PHPUnit\Util\Exception` usage with `LocalizedException` in the remote import controller.
+
+### Updated
+- Widened `composer.json` PHP constraint to support PHP 8.1 through 8.5.
+
 ## 1.7.0
 ## Updated
 - Add security check on external files imported through template.

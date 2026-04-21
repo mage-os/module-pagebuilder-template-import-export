@@ -42,6 +42,9 @@ class ModuleConfig extends AbstractHelper
         $dropboxCredentials = $this->scopeConfig->getValue(self::DROPBOX_CREDENTIALS);
 
         if (!is_array($dropboxCredentials)) {
+            if (!is_string($dropboxCredentials) || $dropboxCredentials === '') {
+                return [];
+            }
             $dropboxCredentials = $this->serializer->unserialize($dropboxCredentials);
         }
 
@@ -54,7 +57,11 @@ class ModuleConfig extends AbstractHelper
      */
     public function getDropboxAccountCredentialsByAppKey(string $appKey): mixed
     {
-        foreach($this->getDropboxCredentials() as $accountCredential) {
+        $credentials = $this->getDropboxCredentials();
+        if (!is_array($credentials)) {
+            return false;
+        }
+        foreach ($credentials as $accountCredential) {
             if ($accountCredential["app_key"] === $appKey) {
                 return $accountCredential;
             }

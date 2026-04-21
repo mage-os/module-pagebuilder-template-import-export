@@ -18,7 +18,7 @@ class UpdateRemoteTemplateList extends \Symfony\Component\Console\Command\Comman
     public function __construct(
         protected RemoteStorageManagementInterface $remoteStorageManagement
     ) {
-        return parent::__construct();
+        parent::__construct();
     }
 
     protected function configure()
