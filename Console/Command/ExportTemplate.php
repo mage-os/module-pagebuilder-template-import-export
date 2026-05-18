@@ -73,7 +73,7 @@ class ExportTemplate extends \Symfony\Component\Console\Command\Command
     /**
      * {@inheritdoc}
      */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $output->setDecorated(true);
 
