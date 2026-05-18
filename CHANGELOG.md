@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## 1.8.1 - 2026-05-17
 ### Fixed
-- Declare `: int` return type on `execute()` in `ExportTemplate`, `ImportTemplate`, and `UpdateRemoteTemplateList` to match `Symfony\Component\Console\Command\Command::execute()` and resolve a PHP fatal error on module load.
+- Declare `: int` return type on CLI commands for compatibility with Magento 2.4.9 and Mage-OS 3.
 
 ## 1.8.0 - 2026-04-21
 ### Fixed
