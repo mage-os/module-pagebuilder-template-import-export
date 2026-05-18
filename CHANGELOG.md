@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 1.8.1 - 2026-05-17
+### Fixed
+- Declare `: int` return type on `execute()` in `ExportTemplate`, `ImportTemplate`, and `UpdateRemoteTemplateList` to match `Symfony\Component\Console\Command\Command::execute()` and resolve a PHP fatal error on module load.
+
 ## 1.8.0 - 2026-04-21
 ### Fixed
 - PHP 8.4 and PHP 8.5 compatibility.
