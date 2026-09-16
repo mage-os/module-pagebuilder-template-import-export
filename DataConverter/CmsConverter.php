@@ -4,9 +4,12 @@ declare(strict_types=1);
 namespace MageOS\PageBuilderTemplateImportExport\DataConverter;
 
 use Magento\Framework\App\DeploymentConfig;
+use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\Framework\Data\Wysiwyg\Normalizer;
 use Magento\Framework\DB\DataConverter\DataConversionException;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\Filesystem;
+use Magento\Framework\Filesystem\Directory\ReadInterface;
 use Magento\Framework\Filter\Template\Tokenizer\Parameter;
 use Magento\Framework\Filter\Template\Tokenizer\ParameterFactory;
 use Magento\Framework\DB\DataConverter\SerializedToJson;
@@ -32,6 +35,11 @@ class CmsConverter extends SerializedToJson
     protected $cmsBlocks = [];
 
     /**
+     * @var ReadInterface|null
+     */
+    private ?ReadInterface $mediaDirectory = null;
+
+    /**
      * @param Normalizer $normalizer
      * @param ParameterFactory $parameterFactory
      * @param Json $json
@@ -41,6 +49,7 @@ class CmsConverter extends SerializedToJson
      * @param ManagerInterface $messageManager
      * @param DeploymentConfig $deploymentConfig
      * @param PathValidator $pathValidator
+     * @param Filesystem $filesystem
      */
     public function __construct(
         protected Normalizer $normalizer,
@@ -51,7 +60,8 @@ class CmsConverter extends SerializedToJson
         protected StoreManagerInterface $storeManager,
         protected ManagerInterface $messageManager,
         protected DeploymentConfig $deploymentConfig,
-        protected PathValidator $pathValidator
+        protected PathValidator $pathValidator,
+        protected Filesystem $filesystem
     ) {
         parent::__construct($serialize, $json);
     }
@@ -137,6 +147,66 @@ class CmsConverter extends SerializedToJson
             return $convertedValue;
         }
         return ["value" => $convertedValue, "assets" => $this->assets, "children" => $this->cmsBlocks];
+    }
+
+    /**
+     * The pub/media directory, resolved lazily since not every convert() call needs it.
+     *
+     * @return ReadInterface
+     */
+    private function getMediaDirectory(): ReadInterface
+    {
+        if ($this->mediaDirectory === null) {
+            $this->mediaDirectory = $this->filesystem->getDirectoryRead(DirectoryList::MEDIA);
+        }
+        return $this->mediaDirectory;
+    }
+
+    /**
+     * Register $value as a template asset when it resolves to a real file under pub/media.
+     *
+     * Widget image fields (the plain "Banner image" field as much as an item inside a
+     * repeatable row) do not necessarily store an absolute URL - the stock media browser
+     * dialog fills them in with a bare path relative to pub/media (e.g. "wysiwyg/x.jpg"),
+     * the same convention {{media url="..."}} directives use. The previous asset scan only
+     * ever looked inside repeatable_* / conditions_encoded parameters and only recognised a
+     * full "https://host/media/..." URL, so a plain image parameter - or any image field
+     * storing the bare relative form - was never added to the export archive at all, and
+     * silently missing once re-imported on another environment. Checking the filesystem
+     * instead of guessing from a naming convention or a URL shape catches every form
+     * (absolute URL, root-relative "/media/...", or bare relative path) and works for any
+     * widget's image field, not just the ones whose parameter names this converter knows.
+     *
+     * @param string $value
+     * @return void
+     */
+    private function collectMediaAsset(string $value): void
+    {
+        $value = trim($value);
+        if ($value === '' || strlen($value) > 2048) {
+            return;
+        }
+
+        $candidate = $value;
+        if (preg_match('#^https?://[^/\s]+(/.*)$#i', $value, $matches)) {
+            $candidate = $matches[1];
+        }
+        $candidate = ltrim(str_replace('\\', '/', $candidate), '/');
+        if (str_starts_with($candidate, 'media/')) {
+            $candidate = substr($candidate, strlen('media/'));
+        }
+
+        if ($candidate === ''
+            || !$this->pathValidator->isSafeRelativePath($candidate)
+            || !$this->getMediaDirectory()->isFile($candidate)
+        ) {
+            return;
+        }
+
+        $asset = 'media/' . $candidate;
+        if (!in_array($asset, $this->assets, true)) {
+            $this->assets[] = $asset;
+        }
     }
 
     /**
@@ -243,6 +313,27 @@ class CmsConverter extends SerializedToJson
         foreach(array_keys($widgetParameters) as $key) {
             if (str_contains($key, 'repeatable_') || $key === 'conditions_encoded') {
                 $keysToUnserialize[] = $key;
+            }
+        }
+
+        // Scan every parameter for media assets, not just the ones the rewrite pass below
+        // touches: a plain (non-repeatable) image parameter never reaches that pass at all,
+        // and it only recognises absolute URLs, so a bare relative path - the format the
+        // media browser actually stores - was skipped even inside a repeatable row.
+        foreach ($widgetParameters as $key => $value) {
+            if (in_array($key, $keysToUnserialize, true)) {
+                if ($this->isValidJsonValue($value)) {
+                    $decodedRows = $this->json->unserialize($this->normalizer->restoreReservedCharacters($value));
+                    foreach ((array)$decodedRows as $row) {
+                        foreach ((array)$row as $fieldValue) {
+                            if (is_string($fieldValue)) {
+                                $this->collectMediaAsset($fieldValue);
+                            }
+                        }
+                    }
+                }
+            } elseif (is_string($value)) {
+                $this->collectMediaAsset($value);
             }
         }
 

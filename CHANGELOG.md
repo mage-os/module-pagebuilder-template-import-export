@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## 1.10.0 - 2026-09-16
+### Fixed
+- Export widget image fields (advanced-widget included) that store a bare `pub/media`-relative path instead of an
+  absolute URL, or that are not inside a `repeatable_*`/`conditions_encoded` row. These were previously skipped
+  entirely and went missing on re-import elsewhere.
+
 ## 1.9.0 - 2026-08-05
 ### Security
 - Restrict PageBuilder template import to `.zip` uploads
