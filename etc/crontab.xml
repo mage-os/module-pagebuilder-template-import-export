@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
     <group id="default">
-        <job name="mageos_update_remote_templates_informations" instance="MageOS\PageBuilderTemplateImportExport\Cron\UpdateRemoteTemplates" method="execute">
+        <job name="mageos_update_remote_templates_informations" instance="MageOS\PageBuilderTemplateImportExport\Cron\UpdateRemoteTemplateList" method="execute">
             <schedule>0 0 * * *</schedule>
         </job>
     </group>
