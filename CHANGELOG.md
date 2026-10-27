@@ -6,9 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## 1.9.1 - 2026-10-27
 ### Fixed
-- Point the `mageos_update_remote_templates_informations` cron job at the existing `Cron\UpdateRemoteTemplateList`
-  class. The job referenced a non-existent class and errored on every run, so the remote (Dropbox) template list was
-  never refreshed by cron (#22, #24).
+- Fix the remote template cron job referencing a non-existent class, so the template list is refreshed nightly again (#22, #24).
 
 ## 1.9.0 - 2026-08-05
 ### Security
